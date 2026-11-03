@@ -2,32 +2,38 @@ name: Keep Render Alive
 
 on:
   schedule:
-    # প্রতি ১০ মিনিটে GitHub Actions চালু হবে
-    # কিন্তু ভেতরে loop করে প্রতি ১ মিনিটে ping করবে
-    # এতে GitHub cron delay-এর সমস্যা থাকলেও সার্ভার জেগে থাকবে
-    - cron: "*/10 * * * *"
+    # প্রতি ৫ মিনিটে চালু হবে
+    # ভেতরে ৪ মিনিট loop করবে → প্রতি ১ মিনিটে ping
+    # দুটো job মিলে ১০ মিনিটে ৮-৯ বার ping হবে
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 9  # ১০ মিনিট job, ৯ মিনিট ping loop
+    timeout-minutes: 4
 
     steps:
-      - name: Ping Render every minute for 9 minutes
+      - name: Ping Render every minute for 4 minutes
         run: |
           HEALTH_URL="${{ secrets.HEALTH_URL }}"
-          echo "Starting ping loop at $(date)"
+          echo "🚀 Ping loop started at $(date)"
 
-          # ৯ বার ping করব (প্রতিটার মাঝে ৬০ সেকেন্ড বিরতি)
-          for i in $(seq 1 9); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$HEALTH_URL" 2>/dev/null || echo "000")
-            echo "[$i/9] $(date '+%H:%M:%S') → HTTP $STATUS"
+          for i in $(seq 1 4); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 \
+              --connect-timeout 5 \
+              "$HEALTH_URL" 2>/dev/null || echo "000")
 
-            # শেষ iteration-এ আর sleep করব না
-            if [ "$i" -lt 9 ]; then
+            if [ "$STATUS" = "200" ]; then
+              echo "[$i/4] $(date '+%H:%M:%S') ✅ HTTP $STATUS — Server alive"
+            else
+              echo "[$i/4] $(date '+%H:%M:%S') ⚠️ HTTP $STATUS — Server may be restarting"
+            fi
+
+            if [ "$i" -lt 4 ]; then
               sleep 60
             fi
           done
 
-          echo "Ping loop done at $(date)"
+          echo "✅ Ping loop done at $(date)"

@@ -1,17 +1,22 @@
-# fiverr-alarm-ping
+# GigAlert — Ping
 
-GitHub Actions দিয়ে Render সার্ভার প্রতি ৫ মিনিটে ping করে জাগিয়ে রাখে।
+GitHub Actions workflow that keeps the Render server alive.
 
-## কীভাবে কাজ করে
+## How it works
 
-`.github/workflows/ping.yml` — প্রতি ৫ মিনিটে `/health` endpoint-এ GET request পাঠায়।
+`.github/workflows/ping.yml` runs every 10 minutes via cron.
+Each run loops for 9 minutes, pinging `/health` every 1 minute.
+This ensures the Render free-tier server never sleeps.
 
-## Setup
+## Secret Required
 
-Repository Settings → Secrets and variables → Actions → New repository secret:
-- `HEALTH_URL` = `https://তোমার-অ্যাপ.onrender.com/health`
+`fiverr-alarm` repo → Settings → Secrets → Actions:
 
-## সতর্কতা
+| Name | Value |
+|---|---|
+| `HEALTH_URL` | `https://fiverr-alarm-hiff.onrender.com/health` |
 
-GitHub Actions schedule ৬০ দিন কোনো commit না থাকলে বন্ধ হয়ে যায়।
-প্রতি ২ মাসে একবার এই ফাইলে যেকোনো ছোট পরিবর্তন করে commit দাও।
+## Note
+
+GitHub cron may delay up to 15-30 minutes during busy periods.
+The server also self-pings every 4 minutes via `RENDER_EXTERNAL_URL`.
