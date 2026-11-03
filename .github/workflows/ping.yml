@@ -1,0 +1,26 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # প্রতি ৫ মিনিটে চলবে
+    # GitHub busy সময়ে ১৫-৩০ মিনিট দেরি করতে পারে, তাই cron-job.org ব্যাকআপ রাখো
+    - cron: "*/5 * * * *"
+  # হাতে চালাতে চাইলে GitHub → Actions → Run workflow
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Ping Render health endpoint
+        run: |
+          echo "Pinging server at $(date)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.HEALTH_URL }}")
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ Server returned $STATUS — may be restarting"
+          else
+            echo "✅ Server is alive"
+          fi
